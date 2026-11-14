@@ -35,13 +35,13 @@
   }
 
   // ---------- state ----------
-  var diver = { x: 0, y: 0, vx: 0, vy: 0, face: 1, t: 0 };
+  var diver = { x: 0, y: 0, vx: 0, vy: 0, face: 1, t: 0, pitch: 0 };
   var target = { x: 0, y: 0 };
   var bubbles = [];
   var seaweed = [];
   var fish = { x: 0, y: 0, vx: 40, vy: 0, wx: 0, wy: 0, face: 1, t: 0, size: 1, sp: 55,
                ylo: 0.30, yhi: 0.65, body: '#ff8a1f', fin: '#ff9a2e', tail: '#ff7a00', stripe: '#ffffff' };
-  var school = [], jellies = [], stars = [], octo = null, crab = null;
+  var school = [], jellies = [], stars = [], corals = [], octo = null, crab = null;
   var FISH_COLORS = [
     ['#ff4fa3', '#ff8cc6', '#ffffff'], ['#3b82f6', '#93c5fd', '#ffe14d'], ['#ffd21f', '#ffea7a', '#2b2f3a'],
     ['#22c55e', '#86efac', '#ffffff'], ['#a855f7', '#d8b4fe', '#ffffff'], ['#ef4444', '#fca5a5', '#ffffff'],
@@ -68,7 +68,7 @@
         w: (9 + Math.random() * 5) * S,
         ph: Math.random() * 6.28,
         sp: 0.8 + Math.random() * 0.6,
-        hue: 125 + Math.random() * 25
+        hue: [135, 150, 170, 290, 330, 20][i % 6]
       });
     }
   }
@@ -95,6 +95,12 @@
       jellies.push({ x: W * (0.2 + i * 0.55), y: H * (0.3 + i * 0.1), bx: W * (0.2 + i * 0.55), by: H * (0.3 + i * 0.1),
                      ph: Math.random() * 6, size: 0.9 + Math.random() * 0.4 });
     }
+    corals = [];
+    var cc = ['#ff5d8f', '#ff9f1c', '#b565ff', '#2ec4b6'];
+    var cn = Math.max(3, Math.round(W / 230));
+    for (i = 0; i < cn; i++) {
+      corals.push({ x: (i + 0.5 + (Math.random() - 0.5) * 0.4) / cn * W, s: 0.8 + Math.random() * 0.6, col: cc[i % 4] });
+    }
     octo = { x: W * 0.8, y: H * 0.62, vx: 0, vy: 0, wx: W * 0.8, wy: H * 0.62, t: 0 };
     crab = { x: W * 0.3, dir: 1, pause: 0, t: 0 };
     stars = [];
@@ -109,16 +115,17 @@
   // ---------- drawing helpers ----------
   function drawBackground(t) {
     var g = ctx.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, '#5fd0e6');
-    g.addColorStop(0.5, '#1d8fbf');
-    g.addColorStop(1, '#0a4f7a');
+    g.addColorStop(0, '#8af5e4');
+    g.addColorStop(0.35, '#38c2f0');
+    g.addColorStop(0.7, '#3d7be0');
+    g.addColorStop(1, '#5a3fb8');
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
 
     // soft light rays
     ctx.save();
-    ctx.globalAlpha = 0.07;
-    ctx.fillStyle = '#ffffff';
+    ctx.globalAlpha = 0.10;
+    ctx.fillStyle = '#fff6b0';
     for (var i = 0; i < 4; i++) {
       var x0 = W * (0.1 + i * 0.27) + Math.sin(t * 0.0003 + i) * 30;
       ctx.beginPath();
@@ -133,7 +140,7 @@
 
     // sand
     var sandH = Math.max(40, H * 0.1);
-    ctx.fillStyle = '#e8cf93';
+    ctx.fillStyle = '#ffdfa6';
     ctx.beginPath();
     ctx.moveTo(0, H);
     ctx.lineTo(0, H - sandH);
@@ -153,7 +160,7 @@
     for (var i = 0; i < seaweed.length; i++) {
       var p = seaweed[i];
       var segs = 8;
-      ctx.strokeStyle = 'hsl(' + p.hue + ',55%,32%)';
+      ctx.strokeStyle = 'hsl(' + p.hue + ',70%,38%)';
       ctx.lineWidth = p.w;
       ctx.beginPath();
       for (var k = 0; k <= segs; k++) {
@@ -163,7 +170,7 @@
         if (k === 0) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
       }
       ctx.stroke();
-      ctx.strokeStyle = 'hsl(' + p.hue + ',55%,42%)';
+      ctx.strokeStyle = 'hsl(' + p.hue + ',75%,52%)';
       ctx.lineWidth = p.w * 0.4;
       ctx.beginPath();
       for (k = 0; k <= segs; k++) {
@@ -219,9 +226,9 @@
     var d = diver;
     var speed = Math.sqrt(d.vx * d.vx + d.vy * d.vy);
     var move = Math.min(1, speed / 220);
-    var bob = Math.sin(d.t * 2) * 4 * (1 - move * 0.6);
+    var bob = Math.sin(d.t * 1.7) * 8 * (1 - move * 0.7);
     var kick = Math.sin(d.t * (4 + move * 8)) * (0.25 + move * 0.45);
-    var tilt = Math.max(-0.5, Math.min(0.5, d.vy / 500)) + 0.08;
+    var tilt = d.pitch + 0.06;
 
     ctx.save();
     ctx.translate(d.x, d.y + bob);
@@ -230,22 +237,22 @@
 
     // far leg + far arm
     limb(-40, 12, -92, 18 + kick * 40, 24, YEL_D);
-    ell(-108, 20 + kick * 46, 22, 8, '#2b2f3a', 0.3 + kick);
+    ell(-108, 20 + kick * 46, 22, 8, '#ff4fa3', 0.3 + kick);
     limb(18, -8, 50, 10 - kick * 14, 15, YEL_D);
 
     // tank
-    ctx.fillStyle = '#7fa6b8';
+    ctx.fillStyle = '#2fc7c0';
     ctx.beginPath();
     ctx.roundRect(-52, -62, 28, 62, 12);
     ctx.fill();
-    ctx.fillStyle = '#5d8396';
+    ctx.fillStyle = '#1b9e98';
     ctx.fillRect(-52, -50, 28, 6);
     ell(-38, -66, 6, 4, '#444');
 
     // body (chubby)
     ell(-2, 0, 54, 40, YEL);
     ell(-2, 8, 50, 30, '#ffe066');
-    ctx.strokeStyle = '#2b2f3a';
+    ctx.strokeStyle = '#ff4fa3';
     ctx.lineWidth = 5;
     ctx.beginPath();
     ctx.moveTo(-40, -22);
@@ -254,19 +261,26 @@
 
     // near leg
     limb(-34, 18, -88, 28 - kick * 40, 26, YEL);
-    ell(-104, 30 - kick * 46, 22, 8, '#2b2f3a', -0.3 - kick);
+    ell(-104, 30 - kick * 46, 22, 8, '#ff7ac2', -0.3 - kick);
 
-    // head: hair back + bun, hood, face
-    ell(46, -52, 14, 14, HAIR);            // bun
-    ell(44, -30, 34, 33, HAIR);            // hair back
-    ell(54, -26, 31, 30, YEL);             // hood
-    ell(58, -24, 25, 24, SKIN);            // face
-
-    // fringe
-    ctx.fillStyle = HAIR;
-    ctx.beginPath();
-    ctx.ellipse(58, -42, 24, 10, 0.05, Math.PI, 6.2832);
-    ctx.fill();
+    // head: curly hair behind, face, curls in front
+    var HC = '#6b3a1e', HL = '#8a521f';
+    function curl(cx, cy, r) {
+      ell(cx, cy, r, r, HC);
+      ctx.strokeStyle = HL; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(cx, cy, r * 0.55, 0.3, 4.4); ctx.stroke();
+    }
+    for (var h = 0; h < 10; h++) {          // back and top curls
+      var ha = -1.1 - h * 0.5;
+      curl(54 + Math.cos(ha) * 31, -26 + Math.sin(ha) * 30, 12.5);
+    }
+    for (h = 0; h < 7; h++) {               // outer layer for volume
+      var hb = -1.3 - h * 0.55;
+      curl(54 + Math.cos(hb) * 40, -26 + Math.sin(hb) * 39, 9);
+    }
+    ell(58, -24, 26, 25, SKIN);             // face
+    for (h = 0; h < 6; h++) curl(37 + h * 8.5, -47 + Math.abs(h - 2.5) * 1.6, 8.5);  // fringe curls
+    curl(33, -34, 7);
 
     // cheeks
     ell(42, -14, 6, 4, 'rgba(255,120,130,0.45)');
@@ -335,8 +349,11 @@
     ctx.restore();
   }
 
-  function drawFish(t) {
+  function drawSchool() {
     for (var i = 0; i < school.length; i++) drawOneFish(school[i]);
+  }
+
+  function drawMessageFish(t) {
     drawOneFish(fish);
     drawSpeech(t);
   }
@@ -400,6 +417,22 @@
     ctx.fill();
     ell(-8, -14, 8, 5, 'rgba(255,255,255,0.4)', -0.4);
     ell(-8, -4, 2.5, 3, '#6b2b5e'); ell(8, -4, 2.5, 3, '#6b2b5e');
+    ctx.restore();
+  }
+
+  function drawCoral(c) {
+    var sandH = Math.max(40, H * 0.1);
+    ctx.save();
+    ctx.translate(c.x, H - sandH + 16);
+    ctx.scale(S * c.s, S * c.s);
+    ctx.strokeStyle = c.col; ctx.fillStyle = c.col; ctx.lineCap = 'round';
+    ctx.lineWidth = 11;
+    var br = [[0, 0, 0, -48], [0, -26, -26, -62], [0, -30, 28, -66], [0, -48, -6, -84], [-14, -44, -34, -50]];
+    ctx.beginPath();
+    for (var i = 0; i < br.length; i++) { ctx.moveTo(br[i][0], br[i][1]); ctx.lineTo(br[i][2], br[i][3]); }
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    for (i = 1; i < br.length; i++) { ctx.beginPath(); ctx.arc(br[i][2], br[i][3], 3.2, 0, 6.2832); ctx.fill(); }
     ctx.restore();
   }
 
@@ -525,15 +558,12 @@
     var d = diver;
     d.t += dt;
 
-    // smooth follow: ease toward the pointer
-    var k = 1 - Math.pow(0.02, dt);          // frame-rate independent easing
-    var nx = d.x + (target.x - d.x) * k * 0.9;
-    var ny = d.y + (target.y - d.y) * k * 0.9;
-    var ivx = (nx - d.x) / Math.max(dt, 0.001);
-    var ivy = (ny - d.y) / Math.max(dt, 0.001);
-    d.vx += (ivx - d.vx) * Math.min(1, dt * 10);
-    d.vy += (ivy - d.vy) * Math.min(1, dt * 10);
-    d.x = nx; d.y = ny;
+    // smooth spring-like follow: gentle start, soft stop (a little floatier going up/down)
+    d.vx += ((target.x - d.x) * 14 - d.vx * 7.5) * dt;
+    d.vy += ((target.y - d.y) * 9 - d.vy * 6) * dt;
+    d.x += d.vx * dt;
+    d.y += d.vy * dt;
+    d.pitch += (Math.max(-0.6, Math.min(0.6, d.vy / 330)) - d.pitch) * Math.min(1, dt * 5);
     var dx = target.x - d.x;
     if (Math.abs(dx) > 18) d.face = dx > 0 ? 1 : -1;
 
@@ -624,13 +654,15 @@
     ctx.clearRect(0, 0, W, H);
     drawBackground(now);
     drawSeaweed(now);
-    for (var q = 0; q < stars.length; q++) drawStar(stars[q]);
+    for (var q = 0; q < corals.length; q++) drawCoral(corals[q]);
+    for (q = 0; q < stars.length; q++) drawStar(stars[q]);
     drawCrab();
     for (q = 0; q < jellies.length; q++) drawJelly(jellies[q]);
     drawOctopus();
     drawBubbles();
-    drawFish(now);
+    drawSchool();
     drawDiver();
+    drawMessageFish(now);
     requestAnimationFrame(frame);
   }
 
